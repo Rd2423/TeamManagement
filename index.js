@@ -1,172 +1,147 @@
-const { writeFile } = require('./utils/generate-site.js');
+// node modules
 const inquirer = require("inquirer");
+const fs = require("fs");
+// employee classes
 const Manager = require("./lib/Manager");
-const Employee = require("./lib/Employee.js")
+const Engineer = require("./lib/Engineer");
+const Intern = require("./lib/Intern");
 
-// Array where all the data is going to be pushed
-const managerArray = [];
-const teamArray = [];
+//page template
+const generatePage = require("./src/page-template");
 
+//team array
+const team = [];
 
-// function that ask for employee info
-  function createTeam() {
-    inquirer.prompt([
+// writing files
+const writeFile = (fileContent) => {
+  return new Promise((resolve, reject) => {
+    fs.writeFile("./dist/index.html", fileContent, (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+
+      resolve({
+        ok: true,
+        message: "File created!",
+      });
+    });
+  });
+};
+
+//get data for constuctors
+const prompts = (role) => {
+  //set uniques value bassed on job role
+  let unique;
+  switch (role) {
+    case "Manager":
+      unique = "Office";
+      break;
+    case "Engineer":
+      unique = "GitHub";
+      break;
+    case "Intern":
+      unique = "School";
+      break;
+  }
+
+  return inquirer
+    .prompt([
       {
+        //get name
         type: "input",
         name: "name",
-        message: "what's is his name",
+        message: `Enter ${role}'s name.`,
         validate: (nameInput) => {
           if (nameInput) {
             return true;
           } else {
-            console.log("Please enter a name");
-            return false;
+            console.log(`Please enter ${role}'s name!`);
           }
-        }
+        },
       },
       {
-        type: "checkbox",
-        name: "position",
-        message: "What is his position on the team?",
-        choices: ["Software Engineer", "intern"],
-        validate: (answerInput) => {
-          if (answerInput) {
-            return true;
-          } else {
-            return false;
-          }
-        }
-      },
-      {
+        //get id
         type: "input",
         name: "id",
-        message: "What is your badge ID",
+        message: `Enter ${role}'s ID.`,
         validate: (idInput) => {
           if (idInput) {
             return true;
           } else {
-            console.log("Please enter your ID");
-            return false;
+            console.log(`Please enter ${role}'s ID!`);
           }
-        }
+        },
       },
       {
+        //get email
         type: "input",
         name: "email",
-        message: "What is his email address",
-        validate: (answer) => {
-          const pass = answer.match(/^[^\s@]+@[^\s@]+$/);
-          if (pass) {
+        message: `Enter ${role}'s email.`,
+        validate: function (email) {
+          let check = email.match(/\S+@\S+\.\S+/g);
+          if (check) {
             return true;
           }
           return "Please enter a valid email.";
-        }
+        },
       },
       {
+        // get office/school/github
         type: "input",
-        name: "github",
-        message: "What is his github username",
-        validate: (answer) => {
-          const pass = answer.match(/^[^\s@]+@[^\s@]+$/);
-          if (pass) {
+        name: "unique",
+        message: `Enter ${role}'s ${unique}.`,
+        validate: (idInput) => {
+          if (idInput) {
             return true;
+          } else {
+            console.log(`Please enter ${role}'s ${unique}!`);
           }
-          return "Please enter a valid email.";
-        }
+        },
       },
-    {
-        type: 'confirm',
-        name: 'addAnotherMember'
-    }
-    ]).then(answersData => {
-        teamArray.push(answersData);
-        if(answersData.addAnotherMember){
-            return teamInfo(teamArray);
-        } else {
-            return teamArray;
-        }
-    })
-  };
-  
-//-----------------------------------------------------------------------------------------------------------------------------
-
-// function that ask the manager info
-  function makeManager() {
-    inquirer
-      .prompt([
-        {
-          type: "input",
-          name: "managerName",
-          message: "What is the team manager's name?",
-          validate: (answer) => {
-            if (answer !== "") {
-              return true;
-            }
-            return "Please enter a name with at least three characters.";
-          },
-        },
-        {
-          type: "input",
-          name: "managerId",
-          message: "What is the manager's ID?",
-          validate: (answer) => {
-            const pass = answer.match(/^[0-9]*$/);
-            if (pass) {
-              return true;
-            }
-            return "Please enter only numbers.";
-          },
-        },
-        {
-          type: "input",
-          name: "managerEmail",
-          message: "What is the manager's email?",
-          validate: (answer) => {
-            const pass = answer.match(/^[^\s@]+@[^\s@]+$/);
-            if (pass) {
-              return true;
-            }
-            return "Please enter a valid email.";
-          },
-
-          type: "input",
-          name: "managerOfficeNumber",
-          message: "What is the manager's office number?",
-          validate: (answer) => {
-            const pass = answer.match(/^[0-9]*$/);
-            if (pass) {
-              return true;
-            }
-            return "Please enter only numbers.";
-          },
-        },
-      ])
-      .then(answers => {
-        managerArray.push(answers);
-        if(answers){
-            return true;
-        } else {
-            return '';
-        }
-        
-      });
-    }
-
-makeManager()
-.then(createTeam)
-.then(answers => {
-    return 
-})
-
-
-//     function createTeam() {
-//       // Prompt what is your job position
-//       // If statement === "whatever job position you choose"
-//       // Call function for that job positon and spepcific questions for that postion
-//       // Push to team
-//       // Get team to render to HTML
-//     }
-//   }
-
-
-
+      {
+        //get what to do next
+        type: "list",
+        name: "nextEmployee",
+        message: "What type of employee would you like to add to your team?",
+        choices: ["Engineer", "Intern", "Finished entering my team"],
+      },
+    ])
+    .then((data) => {
+      const { name, id, email, unique, nextEmployee } = data;
+      //pass data to constucters push that class into team array
+      switch (role) {
+        case "Manager":
+          const manager = new Manager(name, id, email, unique);
+          team.push(manager);
+          break;
+        case "Engineer":
+          const engineer = new Engineer(name, id, email, unique);
+          team.push(engineer);
+          break;
+        case "Intern":
+          const intern = new Intern(name, id, email, unique);
+          team.push(intern);
+          break;
+      }
+      //do the next option pass correct role to prompts or make index.html
+      if (nextEmployee === "Engineer") {
+        return prompts("Engineer");
+      } else if (nextEmployee === "Intern") {
+        return prompts("Intern");
+      } else {
+        console.log(`
+          ====================================================================
+          ==                                                                ==
+          ==      Your team web page can be found in the dist folder.       ==
+          ==                                                                ==
+          ====================================================================
+                              This is your team:
+                              `);
+        console.table(team);
+        writeFile(generatePage(team));
+      }
+    });
+};
+//run prompts
+prompts("Manager");
